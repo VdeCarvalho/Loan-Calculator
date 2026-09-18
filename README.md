@@ -48,7 +48,7 @@ O seletor **O que calcular** oferece seis opções. O campo desconhecido deixa d
 | Total a pagar | Valor emprestado, duração e taxa |
 | Valor emprestado | Mensalidade geral, duração e taxa de cada empréstimo |
 
-É possível adicionar vários empréstimos em todos os modos. Nos cálculos de prazo, taxa e valor emprestado existe **uma única mensalidade geral**, fora dos cartões de empréstimo. Como uma parcela total não determina valores independentes para várias incógnitas, a interface declara estas regras:
+É possível adicionar vários empréstimos em todos os modos. Nos cálculos de prazo, taxa e valor emprestado existe um único campo **Mensalidade**, com a mesma aparência das outras variáveis e sem explicações abaixo. O resultado é conjunto, sem repetir a incógnita para cada empréstimo. Como uma parcela total não determina valores independentes para várias incógnitas, a seção recolhida **Como funciona o cálculo** documenta estas regras:
 
 - Prazo: calcula um prazo comum, usando os valores e taxas de cada empréstimo. Distribui a mensalidade entre os contratos para que terminem juntos, com eventual última parcela reduzida.
 - Taxa: calcula uma taxa comum, usando os valores e prazos de cada empréstimo.
@@ -162,8 +162,12 @@ R$260.000 por 300 meses a 14% anuais nominais + R$180.000 por 15 anos a 8% anuai
 
 ## Download do estudo em PDF
 
-Após um cálculo válido, o botão **Download PDF** gera um arquivo no navegador. O relatório inclui os dados usados, hipóteses, resultados, fases e todos os meses do cronograma — inclusive os que não estão na página atual da tabela. Com vários empréstimos, inclui também tabelas individuais com parcela e saldo. Publicidade e botões não são incluídos.
+Após um cálculo válido, o botão **Download PDF** gera um arquivo no navegador. O resultado procurado aparece em um quadro verde no topo, em negrito e com tipografia maior. O resumo usa linhas alternadas para facilitar a leitura. As notas metodológicas ficam em uma caixa na parte inferior da primeira página; notas excepcionalmente extensas continuam no rodapé de páginas adicionais, sem sobreposição.
+
+O relatório inclui os dados usados, hipóteses, resultados, fases e todos os meses do cronograma — inclusive os que não estão na página atual da tabela. Nos cálculos de prazo, taxa e valor emprestado, mostra apenas o resultado conjunto e a tabela mensal consolidada: não repete resultados calculados por empréstimo. Os dados conhecidos de cada contrato continuam documentados separadamente, em outra página quando não couberem no resumo. Nos demais modos, mantém as tabelas individuais de parcelas e saldos. Publicidade e botões não são incluídos.
 
 A exportação é offline, sem bibliotecas externas, impressora virtual ou envio de dados a servidores. O arquivo preserva o idioma selecionado por meio de páginas rasterizadas de alta resolução; o texto do PDF não é selecionável. Relatórios muito longos têm mais páginas e arquivos maiores. Depois da geração, o botão se torna um link para baixar novamente o mesmo estudo. Alterar os dados exige novo cálculo e gera outro relatório.
 
 Validação adicional: 8 cenários de mensalidade geral com prazo/taxa comuns, principal igualmente distribuído, plano normal e lissage; um relatório de 1.000 meses renderizado e conferido visualmente.
+
+Revisão visual do resumo: PDFs de duração, taxa e valor emprestado gerados com os dados reais da aplicação, renderizados e conferidos; verificado destaque da incógnita, notas no rodapé e ausência de resultados individuais nesses modos.

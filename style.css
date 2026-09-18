@@ -5,3 +5,5 @@ header .brand{margin:0;font-size:23px;line-height:1.2}.layout{margin-top:28px}.a
 
 .global-payment{margin-bottom:24px;padding:18px;background:#f3f8f6;border-radius:10px;border:1px solid #dce8e1}.download{margin:0 0 20px}.download:disabled{opacity:.65;cursor:wait}
 a.download{text-decoration:none}
+
+.payment-field{margin-bottom:24px;max-width:100%}
