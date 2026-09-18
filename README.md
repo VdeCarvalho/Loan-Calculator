@@ -1,6 +1,6 @@
 # Loan Calculator — calculadora de múltiplos empréstimos
 
-Site estático, responsivo e sem dependências. Os cálculos acontecem no navegador, sem enviar os valores para um servidor. A interface começa em inglês.
+Site estático, responsivo e sem dependências. Os cálculos acontecem no navegador, sem enviar os valores para um servidor. A interface começa em inglês, com dólar americano (USD) e todos os campos numéricos vazios. Novos empréstimos também começam vazios. Nenhum resultado é gerado antes do primeiro cálculo.
 
 ## Testar agora
 
@@ -13,7 +13,7 @@ Não precisa instalar Node, usar terminal nem configurar uma API. Use números s
 ## Publicar no GitHub Pages
 
 1. Crie um repositório no GitHub.
-2. Envie **o conteúdo da pasta `dist`**, deixando `index.html`, `app.js`, `finance.js`, `i18n.js`, `style.css` e `favicon.svg` na raiz do repositório. Inclua `.nojekyll` se o seu método de upload mostrar arquivos ocultos.
+2. Envie **o conteúdo da pasta `dist`**, deixando `index.html`, `app.js`, `finance.js`, `i18n.js`, `style.css`, `pdf.js` e `favicon.svg` na raiz do repositório. Inclua `.nojekyll` se o seu método de upload mostrar arquivos ocultos.
 3. No repositório, vá a **Settings → Pages**.
 4. Em **Build and deployment → Source**, selecione **Deploy from a branch**.
 5. Escolha a branch `main`, pasta **/(root)**, e salve.
@@ -42,19 +42,25 @@ O seletor **O que calcular** oferece seis opções. O campo desconhecido deixa d
 | Calcular | Informações necessárias, por empréstimo |
 | --- | --- |
 | Mensalidade | Valor emprestado, duração e taxa |
-| Duração | Valor emprestado, taxa e mensalidade conhecida |
-| Taxa de juros | Valor emprestado, duração e mensalidade conhecida |
+| Duração | Valor emprestado e taxa de cada empréstimo, mensalidade geral |
+| Taxa de juros | Valor emprestado e duração de cada empréstimo, mensalidade geral |
 | Total de juros / custo do empréstimo | Valor emprestado, duração e taxa |
 | Total a pagar | Valor emprestado, duração e taxa |
-| Valor emprestado | Mensalidade conhecida, duração e taxa |
+| Valor emprestado | Mensalidade geral, duração e taxa de cada empréstimo |
 
-É possível adicionar vários empréstimos em todos os modos. Cada cálculo inverso usa a mensalidade **individual** informada para aquele empréstimo, não uma parcela agregada que teria várias soluções. A duração e a taxa são mostradas por empréstimo; o valor emprestado também é somado no resumo. O prazo destacado para vários empréstimos corresponde ao último vencimento.
+É possível adicionar vários empréstimos em todos os modos. Nos cálculos de prazo, taxa e valor emprestado existe **uma única mensalidade geral**, fora dos cartões de empréstimo. Como uma parcela total não determina valores independentes para várias incógnitas, a interface declara estas regras:
+
+- Prazo: calcula um prazo comum, usando os valores e taxas de cada empréstimo. Distribui a mensalidade entre os contratos para que terminem juntos, com eventual última parcela reduzida.
+- Taxa: calcula uma taxa comum, usando os valores e prazos de cada empréstimo.
+- Valor emprestado: calcula o principal total e o divide igualmente entre os empréstimos, usando suas taxas e prazos.
+
+No plano normal, a mensalidade geral é o total enquanto todos os empréstimos estão ativos; cai quando algum termina. No lissage, representa a mensalidade constante até o fim. Taxa e valor oferecem ambos os planos; o prazo comum mantém a soma das parcelas constante até a última parcela. Nenhuma distribuição arbitrária de taxas ou valores individuais é apresentada como solução única.
 
 O prazo calculado pode ser mostrado em meses ou em anos com os meses restantes. Exemplo: 233 meses = 19 anos e 5 meses. Como os pagamentos são mensais, uma duração teórica fracionada é arredondada para o mês seguinte, com redução da última parcela. Não se força um arredondamento para anos inteiros.
 
 A taxa calculada pode ser exibida ao mês ou ao ano (nominal, 12 vezes a mensal). Ela é encontrada numericamente por bisseção, mantendo a precisão interna completa. O resultado é exibido com até seis casas decimais; a restrição de duas casas se aplica às taxas **digitadas**, não à solução numérica.
 
-A mensalidade uniforme continua disponível para calcular parcelas, juros totais e total a pagar. Os cálculos de prazo, taxa e valor emprestado utilizam prestações normais fixas, pois uma prestação global uniformizada não determina de maneira única os dados de cada contrato.
+A mensalidade uniforme está disponível para calcular parcelas, juros totais, total a pagar, taxa comum e valor total com divisão igual. Os cálculos inversos respeitam as regras declaradas acima.
 
 Combinações impossíveis são explicadas: parcela que não cobre juros mensais, parcela menor que o principal dividido pelo prazo ao buscar taxa não negativa, ou prazo superior a 12.000 meses.
 
@@ -96,7 +102,7 @@ mensalidade total C = (P + Σ Aᵢ × a(r,nᵢ)) / a(r,N)
 parcela ajustada no mês m = C - Σ parcelas dos outros empréstimos ativos em m
 ```
 
-A parcela ajustada cresce quando os outros empréstimos terminam, mantendo o total constante e quitando o saldo no prazo original. Os juros são recalculados a partir dos saldos. Se o método exigir parcela negativa ou menor que os juros de um mês, a interface informa que a combinação não é suportada. Não há capitalização de juros não pagos. Outras formas de renegociação não são simuladas.
+A parcela ajustada cresce quando os outros empréstimos terminam, mantendo o total constante e quitando o saldo no prazo original. Os juros são recalculados a partir dos saldos. Se uma parcela não cobrir todos os juros do mês, os juros não pagos são incorporados ao saldo e passam a render juros. O resultado exibe um aviso de amortização negativa e a tabela mostra o saldo de cada empréstimo. O método continua rejeitando parcelas negativas. Outras formas de renegociação não são simuladas.
 
 O cronograma precisa ser aceito pelo banco para corresponder a um contrato real.
 
@@ -134,11 +140,13 @@ dist/i18n.js      Traduções, moedas e idiomas
 dist/finance.js   Motor financeiro independente
 dist/app.js       Interface, validação e tabela
 dist/favicon.svg Ícone do site
+dist/pdf.js      Geração local do relatório PDF
 tests/finance.cjs Verificações financeiras reproduzíveis
 tests/solver.cjs  Testes dos cálculos inversos
+tests/global.cjs  Testes da mensalidade geral
 ```
 
-Se quiser rodar os testes de desenvolvimento e já tiver Node.js, execute `node tests/finance.cjs` e `node tests/solver.cjs` na pasta do projeto. O site em si não depende de Node.
+Se quiser rodar os testes de desenvolvimento e já tiver Node.js, execute `node tests/finance.cjs`, `node tests/solver.cjs` e `node tests/global.cjs` na pasta do projeto. O site em si não depende de Node.
 
 Há também uma integração opcional com WebMCP, ativada apenas em navegadores compatíveis: `calculate_current_loans` calcula os valores já preenchidos na interface. Navegadores comuns ignoram essa integração.
 
@@ -146,4 +154,16 @@ Há também uma integração opcional com WebMCP, ativada apenas em navegadores 
 
 Verificados: fórmula de referência, juros zero, equivalência de taxa mensal/anual nominal, quitação de cada empréstimo em seu prazo, soma de principal e juros, lissage, combinação inviável, entradas inválidas, cronogramas de 1.000 e 12.000 meses e presença de todas as traduções. Os testes incluem 9 cenários do motor original e 16 cronogramas inversos, com recuperação de taxas conhecidas, última parcela parcial e múltiplos empréstimos. No navegador foram testados os seis modos de cálculo, resultados por empréstimo, mensagens de erro, russo e os novos rótulos nos onze idiomas, além da integração WebMCP. A versão anterior também verificou inclusão/remoção, vírgula decimal, rejeição de três casas decimais, mudança de moeda/idioma e exibição de 1.000 linhas.
 
-Os dados não persistem ao recarregar a página: a calculadora volta ao exemplo inicial.
+Os dados não persistem ao recarregar a página: a calculadora volta aos campos vazios, em inglês e USD.
+
+## Correção do lissage — exemplo de regressão
+
+R$260.000 por 300 meses a 14% anuais nominais + R$180.000 por 15 anos a 8% anuais nominais: mensalidade uniforme de **R$4.684,64** durante 300 meses. Nos meses 1–180, o primeiro recebe R$2.964,47 e o segundo R$1.720,17. O saldo do primeiro cresce até R$301.716,45 no mês 180; depois recebe a parcela inteira e é quitado no mês 300. Total calculado: R$1.405.393,13; juros totais: R$965.393,13. Os totais usam precisão completa, antes do arredondamento de exibição. Esse caso integra os testes, com verificação independente de cada saldo e vencimento.
+
+## Download do estudo em PDF
+
+Após um cálculo válido, o botão **Download PDF** gera um arquivo no navegador. O relatório inclui os dados usados, hipóteses, resultados, fases e todos os meses do cronograma — inclusive os que não estão na página atual da tabela. Com vários empréstimos, inclui também tabelas individuais com parcela e saldo. Publicidade e botões não são incluídos.
+
+A exportação é offline, sem bibliotecas externas, impressora virtual ou envio de dados a servidores. O arquivo preserva o idioma selecionado por meio de páginas rasterizadas de alta resolução; o texto do PDF não é selecionável. Relatórios muito longos têm mais páginas e arquivos maiores. Depois da geração, o botão se torna um link para baixar novamente o mesmo estudo. Alterar os dados exige novo cálculo e gera outro relatório.
+
+Validação adicional: 8 cenários de mensalidade geral com prazo/taxa comuns, principal igualmente distribuído, plano normal e lissage; um relatório de 1.000 meses renderizado e conferido visualmente.

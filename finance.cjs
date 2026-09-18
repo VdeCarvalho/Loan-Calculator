@@ -9,6 +9,15 @@ let r=check([loan(1200,12)],false);close(r.rows[0].payment,100);close(r.interest
 r=check([loan(100000,360,6)],false);close(r.rows[0].payment,599.5505251527569);
 const pair=[loan(260000,300,2),loan(40000,240,1.5)];r=check(pair,false);assert.deepEqual(r.periods.map(p=>[p.start,p.end]),[[1,240],[241,300]]);
 const s=check(pair,true);assert(s.interest>r.interest);assert.equal(s.periods.length,1);
+assert.equal(s.hasNegativeAmortization,false);
+const screenshotCase=check([loan(260000,300,14),loan(180000,15,8,'years')],true);
+assert.equal(screenshotCase.hasNegativeAmortization,true);
+assert.equal(screenshotCase.periods.length,1);
+assert(screenshotCase.rows[0].loanBalances[0]>260000);
+assert(screenshotCase.rows[179].loanBalances[0]>260000);
+close(screenshotCase.rows[179].loanBalances[1],0);
+close(screenshotCase.rows[299].loanBalances[0],0);
+console.log(JSON.stringify({monthly:screenshotCase.rows[0].payment,total:screenshotCase.total,interest:screenshotCase.interest,firstPayments:screenshotCase.rows[0].payments,month180Balances:screenshotCase.rows[179].loanBalances}));
 check([loan(240000,25,2,'years'),loan(40000,20,1.5,'years')],true);
 r=check([loan(1200,12),loan(2400,24)],true);close(r.rows[0].payment,150);
 check([loan(600,12,1.5),loan(20000,120,3.2),loan(1000,60,0)],true);
@@ -17,5 +26,5 @@ check([loan(260000,12000,0)],false);
 close(F.calculate([loan(10000,24,1,'months','months')]).total,F.calculate([loan(10000,24,12)]).total);
 assert.throws(()=>F.calculate([loan(1000,24),loan(100000,12)],true),/infeasible/);
 for(const l of [loan(0,12),loan(1000,1.2),loan(1000,12001),loan(1000,12,-1),loan(1000,12,1.123),loan('',12),loan(10,1,Infinity)])assert.throws(()=>F.calculate([l]),/invalid/);
-const context={Intl};vm.createContext(context);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../dist/i18n.js'),'utf8')+';globalThis.data={LANGUAGES,CURRENCIES,KEYS,SOLVER_KEYS,I18N,NOTES}',context);const d=context.data;assert.equal(d.LANGUAGES.length,11);assert.equal(d.CURRENCIES.length,30);for(const [language]of d.LANGUAGES){assert.equal(Object.keys(d.I18N[language]).length,d.KEYS.length+d.SOLVER_KEYS.length+2);assert(d.NOTES[language].length===4);for(const key of [...d.KEYS,...d.SOLVER_KEYS,'loan','periodInterest'])assert(d.I18N[language][key],`${language}.${key}`);}
+const context={Intl};vm.createContext(context);vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../dist/i18n.js'),'utf8')+';globalThis.data={LANGUAGES,CURRENCIES,KEYS,SOLVER_KEYS,GLOBAL_KEYS,I18N,NOTES}',context);const d=context.data;assert.equal(d.LANGUAGES.length,11);assert.equal(d.CURRENCIES.length,30);for(const [language]of d.LANGUAGES){assert.equal(Object.keys(d.I18N[language]).length,d.KEYS.length+d.SOLVER_KEYS.length+d.GLOBAL_KEYS.length+3);assert(d.NOTES[language].length===4);for(const key of [...d.KEYS,...d.SOLVER_KEYS,...d.GLOBAL_KEYS,'loan','periodInterest','negativeAmortization'])assert(d.I18N[language][key],`${language}.${key}`);}
 console.log(`PASS: ${cases} schedules, reference annuity, monthly/annual equivalence, smoothing, deadlines, 1000/12000 months, invalid inputs, 11 complete locales and 30 currencies.`);
