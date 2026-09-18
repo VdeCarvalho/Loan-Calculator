@@ -52,7 +52,7 @@ O seletor **O que calcular** oferece seis opções. O campo desconhecido deixa d
 
 - Prazo: calcula um prazo comum, usando os valores e taxas de cada empréstimo. Distribui a mensalidade entre os contratos para que terminem juntos, com eventual última parcela reduzida.
 - Taxa: calcula uma taxa comum, usando os valores e prazos de cada empréstimo.
-- Valor emprestado: calcula o principal total e o divide igualmente entre os empréstimos, usando suas taxas e prazos.
+- Valor emprestado: no plano normal, calcula o principal total e o divide igualmente entre os empréstimos. No lissage, divide a mensalidade igualmente entre os contratos ativos e redistribui a mensalidade à medida que eles terminam; calcula o principal de cada contrato pelo valor presente de suas parcelas, usando sua taxa e prazo. Assim, os valores emprestados podem diferir.
 
 No plano normal, a mensalidade geral é o total enquanto todos os empréstimos estão ativos; cai quando algum termina. No lissage, representa a mensalidade constante até o fim. Taxa e valor oferecem ambos os planos; o prazo comum mantém a soma das parcelas constante até a última parcela. Nenhuma distribuição arbitrária de taxas ou valores individuais é apresentada como solução única.
 
@@ -60,7 +60,7 @@ O prazo calculado pode ser mostrado em meses ou em anos com os meses restantes. 
 
 A taxa calculada pode ser exibida ao mês ou ao ano (nominal, 12 vezes a mensal). Ela é encontrada numericamente por bisseção, mantendo a precisão interna completa. O resultado é exibido com até seis casas decimais; a restrição de duas casas se aplica às taxas **digitadas**, não à solução numérica.
 
-A mensalidade uniforme está disponível para calcular parcelas, juros totais, total a pagar, taxa comum e valor total com divisão igual. Os cálculos inversos respeitam as regras declaradas acima.
+A mensalidade uniforme está disponível para calcular parcelas, juros totais, total a pagar, taxa comum e valor total com distribuição de parcelas entre contratos ativos. Os cálculos inversos respeitam as regras declaradas acima.
 
 Combinações impossíveis são explicadas: parcela que não cobre juros mensais, parcela menor que o principal dividido pelo prazo ao buscar taxa não negativa, ou prazo superior a 12.000 meses.
 
@@ -171,3 +171,9 @@ A exportação é offline, sem bibliotecas externas, impressora virtual ou envio
 Validação adicional: 8 cenários de mensalidade geral com prazo/taxa comuns, principal igualmente distribuído, plano normal e lissage; um relatório de 1.000 meses renderizado e conferido visualmente.
 
 Revisão visual do resumo: PDFs de duração, taxa e valor emprestado gerados com os dados reais da aplicação, renderizados e conferidos; verificado destaque da incógnita, notas no rodapé e ausência de resultados individuais nesses modos.
+
+## Lissage flexível ao calcular o valor emprestado
+
+A divisão igual do principal foi removida deste modo. Cada mês distribui o orçamento igualmente entre os contratos ainda ativos. O principal de cada contrato é o valor presente de suas parcelas, descontadas pela taxa mensal desse contrato. Não é uma otimização do maior crédito possível: é uma regra explícita para obter uma solução determinada a partir de uma mensalidade conjunta. Outros modos mantêm seus métodos anteriores.
+
+Exemplo: R$2.000 por mês; 12 meses a 12% ao ano, 24 meses a 8% e 36 meses a 4% (taxas nominais). Resultado conjunto: **R$66.580,62**. Total pago: **R$72.000,00**; juros: **R$5.419,38**. Nos primeiros 12 meses, cada contrato recebe um terço da mensalidade; nos 12 seguintes, cada um dos dois restantes recebe metade; nos últimos 12, o último recebe a mensalidade inteira. Diferenças de um centavo na soma visual decorrem do arredondamento de exibição. Todas as parcelas calculadas são não negativas e os três saldos são quitados nos seus respectivos vencimentos.

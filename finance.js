@@ -112,6 +112,16 @@
       r.globalPayment=a;r.globalRule='commonDuration';return r;
     }
     const N=Math.max(...known.map(l=>l.n));
+    if(target==='amount'&&smooth){
+      // Allocate the budget equally to active contracts, then discount each
+      // contract's payments at its own rate to find its initial principal.
+      const payments=Array.from({length:N},(_,m)=>{const active=known.filter(l=>m<l.n).length;return known.map(l=>m<l.n?a/active:0);});
+      const paths=known.map((l,i)=>{const balances=Array(N+1).fill(0);for(let m=l.n;m>0;m--)balances[m-1]=(balances[m]+payments[m-1][i])/(1+l.r);if(!Number.isFinite(balances[0])||balances[0]<=0||balances[0]>1e12)throw Error('invalidSolver');return balances;});
+      let hasNegativeAmortization=false;
+      const rows=payments.map((parts,m)=>{const loanBalances=paths.map(path=>path[m+1]),interest=known.reduce((s,l,i)=>s+paths[i][m]*l.r,0),payment=parts.reduce((s,p)=>s+p,0);if(known.some((l,i)=>parts[i]<paths[i][m]*l.r-1e-7))hasNegativeAmortization=true;return {month:m+1,payments:parts,payment,interest,principal:payment-interest,balance:loanBalances.reduce((s,b)=>s+b,0),loanBalances};});
+      const totalPrincipal=paths.reduce((s,path)=>s+path[0],0),total=rows.reduce((s,row)=>s+row.payment,0);
+      return {rows,periods:[{start:1,end:N,payment:a}],total,totalPrincipal,interest:total-totalPrincipal,months:N,hasNegativeAmortization,globalPayment:a,globalRule:'flexibleAmounts',solved:known.map((l,i)=>({...l,p:paths[i][0],a:payments[0][i],last:payments[l.n-1][i]}))};
+    }
     let loans;
     if(target==='rate'){
       const amount=known.reduce((s,l)=>s+l.p,0);

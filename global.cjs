@@ -10,7 +10,12 @@ r=check([loan(10000,12,0),loan(20000,24,0)],'rate',2000);close(r.solved[0].r,r.s
 r=check([loan(10000,12,0),loan(20000,24,0)],'rate',1500,true);close(r.solved[0].r,r.solved[1].r,1e-12);
 r=check([loan(12000,12,0),loan(24000,24,0)],'rate',2000);close(r.solved[0].r,0);
 r=check([loan(0,12,5),loan(0,24,10)],'amount',1000);close(r.solved[0].p,r.solved[1].p);
-r=check([loan(0,12,5),loan(0,24,10)],'amount',1000,true);close(r.solved[0].p,r.solved[1].p);
+r=check([loan(0,12,5),loan(0,24,10)],'amount',1000,true);assert(r.solved[0].p!==r.solved[1].p);
+r=check([loan(0,12,12),loan(0,24,8),loan(0,36,4)],'amount',2000,true);
+for(let i=0;i<3;i++){const l=r.solved[i];let balance=l.p;for(let m=0;m<l.n;m++)balance=balance*(1+l.r)-r.rows[m].payments[i];close(balance,0);assert(r.rows.slice(l.n).every(row=>row.payments[i]===0&&row.loanBalances[i]===0));}
+close(r.rows[0].payments[0],2000/3);close(r.rows[12].payments[1],1000);close(r.rows[24].payments[2],2000);
+assert(r.rows.every(row=>row.payments.every(p=>p>=0)));close(r.total,72000);
+console.log(JSON.stringify({exampleTotalPrincipal:r.totalPrincipal,totalInterest:r.interest,principals:r.solved.map(l=>l.p)}));
 for(const target of ['duration','rate','amount'])assert.throws(()=>F.solveGlobal([loan(1000,12,5)],target,''));
 assert.throws(()=>F.solveGlobal([loan(12000,12,0),loan(12000,12,0)],'rate',1000),/noRate/);
 assert.throws(()=>F.solveGlobal([loan(1000,12,12),loan(1000,12,12)],'duration',20),/noPayoff/);
