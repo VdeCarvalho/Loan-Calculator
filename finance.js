@@ -15,6 +15,20 @@
     return schedule(normalize(raw),smooth);
   }
   function schedule(loans,smooth=false){
+    try{return originalSchedule(loans,smooth);}catch(error){
+      if(!smooth||error.message!=='infeasible')throw error;
+      // Explicit refinancing scenario: retain principals and rates, extend
+      // shorter contracts to the longest term instead of allowing refunds.
+      const N=Math.max(...loans.map(l=>l.n));
+      const adapted=loans.map(l=>({...l,n:N,a:l.p/factor(l.r,N)}));
+      const result=originalSchedule(adapted,false);
+      result.adaptedTerms=true;
+      result.originalTerms=loans.map(l=>l.n);
+      result.effectiveTerms=adapted.map(l=>l.n);
+      return result;
+    }
+  }
+  function originalSchedule(loans,smooth=false){
     const N=Math.max(...loans.map(l=>l.n));
     // The largest loan among those ending last absorbs the payment steps.
     const candidates=loans.map((l,i)=>({l,i})).filter(x=>x.l.n===N).sort((a,b)=>b.l.p-a.l.p);
@@ -141,7 +155,7 @@
       loans=known.map(l=>({...l,p:principal,a:principal/factor(l.r,l.n)}));
     }else throw Error('invalidSolver');
     const result=schedule(loans,smooth);
-    result.solved=loans.map((l,i)=>({...l,last:result.rows[l.n-1].payments[i]}));
+    result.solved=loans.map((l,i)=>({...l,n:result.effectiveTerms?.[i]??l.n,last:result.rows[(result.effectiveTerms?.[i]??l.n)-1].payments[i]}));
     result.globalPayment=a;result.globalRule=target==='rate'?'commonRate':'equalAmounts';
     return result;
   }
