@@ -24,6 +24,7 @@
     }
     fresh();line(report.title,23,'#17343d',true);line(report.date,12,'#62777e');y+=16;
     if(report.primary){page.push({type:'hero',label:report.primary.label,value:report.primary.value,y,height:112});y+=132;}
+    if(report.notice){const lines=wrap(report.notice,12,W-2*M-32),height=lines.length*18+24;if(y+height>limit())fresh();page.push({type:'notice',lines,y,height});y+=height+14;}
     report.summary.forEach(([label,value],i)=>{if(y+42>limit())fresh();page.push({type:'summary',label,value,y,height:42,striped:i%2===0});y+=42;});
     y+=22;
     if(report.inputs.length&&y+report.inputs.reduce((sum,block)=>sum+block.length*23+12,0)>limit())fresh();
@@ -57,6 +58,9 @@
         c.fillStyle=item.striped?'#f3f6f7':'#fff';c.fillRect(M,item.y,W-2*M,item.height);
         c.direction=report.rtl?'rtl':'ltr';c.textAlign=report.rtl?'right':'left';c.font='13px Arial, sans-serif';c.fillStyle='#60757d';c.fillText(item.label,report.rtl?W-M-14:M+14,item.y+13,(W-2*M)*.45);
         c.textAlign=report.rtl?'left':'right';c.font='bold 15px Arial, sans-serif';c.fillStyle='#17343d';c.fillText(item.value,report.rtl?M+14:W-M-14,item.y+12,(W-2*M)*.5);
+      }
+      else if(item.type==='notice'){
+        c.fillStyle='#fff7df';c.fillRect(M,item.y,W-2*M,item.height);c.fillStyle='#775413';c.font='12px Arial, sans-serif';c.direction=report.rtl?'rtl':'ltr';c.textAlign=report.rtl?'right':'left';item.lines.forEach((line,i)=>c.fillText(line,report.rtl?W-M-16:M+16,item.y+12+i*18));
       }
       else if(item.type==='notes'){
         c.fillStyle='#f3f6f7';c.fillRect(M,item.y,W-2*M,item.height);c.fillStyle='#d4dfe3';c.fillRect(M,item.y,W-2*M,1);

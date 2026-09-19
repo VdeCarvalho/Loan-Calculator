@@ -14,48 +14,83 @@
   function calculate(raw,smooth=false){
     return schedule(normalize(raw),smooth);
   }
-  function schedule(loans,smooth=false){
-    try{return originalSchedule(loans,smooth);}catch(error){
-      if(!smooth||error.message!=='infeasible')throw error;
-      // Explicit refinancing scenario: retain principals and rates, extend
-      // shorter contracts to the longest term instead of allowing refunds.
-      const N=Math.max(...loans.map(l=>l.n));
-      const adapted=loans.map(l=>({...l,n:N,a:l.p/factor(l.r,N)}));
-      const result=originalSchedule(adapted,false);
-      result.adaptedTerms=true;
-      result.originalTerms=loans.map(l=>l.n);
-      result.effectiveTerms=adapted.map(l=>l.n);
-      return result;
-    }
+// Two-phase simplex for max(c*x), A*x <= b, x >= 0.
+// Amounts and present-value equations are scaled before entering the tableau.
+function linearProgram(A,b,c){
+  const m=b.length,n=c.length,eps=1e-10;
+  const D=Array.from({length:m+2},()=>Array(n+2).fill(0));
+  const B=Array.from({length:m},(_,i)=>n+i),V=Array.from({length:n+1},(_,i)=>i);V[n]=-1;
+  for(let i=0;i<m;i++){for(let j=0;j<n;j++)D[i][j]=A[i][j];D[i][n]=-1;D[i][n+1]=b[i];}
+  for(let j=0;j<n;j++)D[m][j]=-c[j];D[m+1][n]=1;
+  function pivot(r,s){
+    const inv=1/D[r][s];
+    for(let i=0;i<m+2;i++)if(i!==r)for(let j=0;j<n+2;j++)if(j!==s)D[i][j]-=D[r][j]*D[i][s]*inv;
+    for(let j=0;j<n+2;j++)if(j!==s)D[r][j]*=inv;
+    for(let i=0;i<m+2;i++)if(i!==r)D[i][s]*=-inv;
+    D[r][s]=inv;[B[r],V[s]]=[V[s],B[r]];
   }
+  function simplex(phase){
+    const row=phase===1?m+1:m;
+    for(let iter=0;iter<100000;iter++){
+      let s=-1;
+      for(let j=0;j<=n;j++){if(phase===2&&V[j]===-1)continue;if(s===-1||D[row][j]<D[row][s]-eps||(Math.abs(D[row][j]-D[row][s])<=eps&&V[j]<V[s]))s=j;}
+      if(D[row][s]>=-eps)return true;
+      let r=-1;
+      for(let i=0;i<m;i++)if(D[i][s]>eps){const ratio=D[i][n+1]/D[i][s],best=r<0?Infinity:D[r][n+1]/D[r][s];if(r<0||ratio<best-eps||(Math.abs(ratio-best)<=eps&&B[i]<B[r]))r=i;}
+      if(r<0)return false;pivot(r,s);
+    }
+    throw Error('infeasible');
+  }
+  let r=0;for(let i=1;i<m;i++)if(D[i][n+1]<D[r][n+1])r=i;
+  if(D[r][n+1]<-eps){pivot(r,n);if(!simplex(1)||D[m+1][n+1]<-eps||Math.abs(D[m+1][n+1])>eps)throw Error('infeasible');
+    for(let i=0;i<m;i++)if(B[i]===-1){let s=-1;for(let j=0;j<=n;j++)if(Math.abs(D[i][j])>eps&&(s<0||V[j]<V[s]))s=j;if(s>=0)pivot(i,s);}
+  }
+  if(!simplex(2))throw Error('infeasible');
+  const x=Array(n).fill(0);for(let i=0;i<m;i++)if(B[i]>=0&&B[i]<n)x[B[i]]=D[i][n+1];return x;
+}
+function smoothPlan(loans,peakOnly=false,budget=null){
+  const ends=[...new Set(loans.map(l=>l.n))].sort((a,b)=>a-b),N=ends.at(-1);
+  const phases=ends.map((end,j)=>({start:j?ends[j-1]:0,end,length:end-(j?ends[j-1]:0)}));
+  const vars=[];loans.forEach((l,i)=>phases.forEach((phase,j)=>{if(phase.end<=l.n)vars.push({i,j});}));
+  const upper=vars.length,lower=upper+1,size=lower+1;
+  const scale=loans.reduce((s,l)=>s+l.p/factor(l.r,l.n),0),A=[],b=[];
+  function add(row,rhs){A.push(row);b.push(rhs);}
+  loans.forEach((l,i)=>{const row=Array(size).fill(0);vars.forEach((v,k)=>{if(v.i===i){const phase=phases[v.j];row[k]=Math.exp(-phase.start*Math.log1p(l.r))*factor(l.r,phase.length)/factor(l.r,l.n);}});const rhs=l.p/factor(l.r,l.n)/scale;add(row,rhs);add(row.map(x=>-x),-rhs);});
+  phases.forEach((phase,j)=>{const row=Array(size).fill(0);vars.forEach((v,k)=>{if(v.j===j)row[k]=1;});row[upper]=-1;add(row,0);const low=row.map(x=>-x);low[upper]=0;low[lower]=1;add(low,0);});
+  if(budget!==null){const row=Array(size).fill(0);row[upper]=1;add(row,budget/scale);}
+  const objective=Array(size).fill(0);objective[upper]=-1;if(!peakOnly)objective[lower]=1;
+  let x=linearProgram(A,b,objective);
+  if(peakOnly)return x[upper]*scale;
+  // Tie-break by total paid, without increasing the optimal spread.
+  const spread=Math.max(0,x[upper]-x[lower]);const bound=Array(size).fill(0);bound[upper]=1;bound[lower]=-1;add(bound,spread+1e-10);
+  const cost=Array(size).fill(0);vars.forEach((v,k)=>cost[k]=-phases[v.j].length/N);x=linearProgram(A,b,cost);
+  const parts=phases.map(()=>loans.map(()=>0));vars.forEach((v,k)=>parts[v.j][v.i]=Math.max(0,x[k])*scale);
+  const paths=loans.map((l,i)=>{const path=Array(N+1).fill(0);for(let j=phases.length-1;j>=0;j--){const phase=phases[j];for(let m=phase.end;m>phase.start;m--)path[m-1]=(path[m]+parts[j][i])/(1+l.r);}if(Math.abs(path[0]-l.p)>Math.max(.005,l.p*1e-8))throw Error('infeasible');return path;});
+  const rows=[];let hasNegativeAmortization=false;
+  phases.forEach((phase,j)=>{for(let m=phase.start;m<phase.end;m++){const payments=[...parts[j]],payment=payments.reduce((s,v)=>s+v,0),interest=loans.reduce((s,l,i)=>{const intr=paths[i][m]*l.r;if(payments[i]<intr-1e-7)hasNegativeAmortization=true;return s+intr;},0),loanBalances=paths.map(path=>path[m+1]);rows.push({month:m+1,payments,payment,interest,principal:payment-interest,balance:loanBalances.reduce((s,v)=>s+v,0),loanBalances});}});
+  const periods=[];for(const row of rows){const prev=periods.at(-1);if(prev&&Math.abs(prev.payment-row.payment)<.005)prev.end=row.month;else periods.push({start:row.month,end:row.month,payment:row.payment});}
+  const totalPrincipal=loans.reduce((s,l)=>s+l.p,0),total=rows.reduce((s,row)=>s+row.payment,0),values=periods.map(p=>p.payment);
+  return {rows,periods,total,totalPrincipal,interest:total-totalPrincipal,months:N,hasNegativeAmortization,approximateSmooth:Math.max(...values)-Math.min(...values)>.005,smoothingMethod:'minimumPhaseRange'};
+}
+
+  function schedule(loans,smooth=false,budget=null){return smooth?smoothPlan(loans,false,budget):originalSchedule(loans,false);}
   function originalSchedule(loans,smooth=false){
     const N=Math.max(...loans.map(l=>l.n));
-    // The largest loan among those ending last absorbs the payment steps.
-    const candidates=loans.map((l,i)=>({l,i})).filter(x=>x.l.n===N).sort((a,b)=>b.l.p-a.l.p);
-    const anchor=candidates[0].i,main=loans[anchor];
-    const constant=(main.p+loans.reduce((sum,l,i)=>sum+(i===anchor?0:l.a*factor(main.r,l.n)),0))/factor(main.r,N);
     const balances=loans.map(l=>l.p),rows=[];
     let hasNegativeAmortization=false;
     for(let m=1;m<=N;m++){
       const payments=loans.map(l=>m<=l.n?l.a:0);
-      if(smooth)payments[anchor]=constant-payments.reduce((s,p,i)=>s+(i===anchor?0:p),0);
       let interest=0,principal=0;
       for(let i=0;i<loans.length;i++){
         const l=loans[i];if(m>l.n)continue;
         const intr=balances[i]*l.r;
-        // A non-negative payment may be below interest: the unpaid interest
-        // is capitalized and repaid during the later payment step.
-        if(smooth&&i===anchor&&payments[i]<-1e-7)throw Error('infeasible');
-        if(smooth&&i===anchor&&payments[i]<0)payments[i]=0;
         // Adjust final installment only for floating-point residuals.
         if(m===l.n)payments[i]=balances[i]+intr;
         const capital=payments[i]-intr;
         if(capital<-1e-7)hasNegativeAmortization=true;
         // Remaining present value avoids accumulated floating-point error
         // for very long terms and large rates.
-        balances[i]=smooth&&i===anchor
-          ? constant*factor(l.r,N-m)-loans.reduce((s,other,j)=>s+(j===anchor?0:other.a*factor(l.r,Math.max(0,other.n-m))),0)
-          : l.a*factor(l.r,l.n-m);
+        balances[i]=l.a*factor(l.r,l.n-m);
         if(balances[i]<-0.01||!Number.isFinite(balances[i]))throw Error('infeasible');
         if(Math.abs(balances[i])<1e-7)balances[i]=0;
         interest+=intr;principal+=capital;
@@ -65,7 +100,7 @@
     const totalPrincipal=loans.reduce((s,l)=>s+l.p,0),total=rows.reduce((s,r)=>s+r.payment,0);
     const periods=[];
     for(const row of rows){const previous=periods[periods.length-1];if(previous&&Math.abs(previous.payment-row.payment)<.005)previous.end=row.month;else periods.push({start:row.month,end:row.month,payment:row.payment});}
-    return {rows,periods,total,totalPrincipal,interest:total-totalPrincipal,months:N,anchor,hasNegativeAmortization};
+    return {rows,periods,total,totalPrincipal,interest:total-totalPrincipal,months:N,hasNegativeAmortization};
   }
   function solve(raw,target){
     if(!['duration','rate','amount'].includes(target))throw Error('invalid');
@@ -138,8 +173,8 @@
     }
     let loans;
     if(target==='rate'){
-      const amount=known.reduce((s,l)=>s+l.p,0);
-      const cost=r=>smooth?amount/factor(r,N):known.reduce((s,l)=>s+l.p/factor(r,l.n),0);
+      
+      const cost=r=>smooth?smoothPlan(known.map(l=>({...l,r})),true):known.reduce((s,l)=>s+l.p/factor(r,l.n),0);
       const tolerance=Math.max(1e-8,a*1e-12);
       if(a<cost(0)-tolerance)throw Error('noRate');
       let rate=0;
@@ -148,14 +183,13 @@
     }else if(target==='amount'){
       // Equal principal shares, explicitly stated in the UI.
       let coefficient;
-      if(smooth){const anchor=known.findIndex(l=>l.n===N),main=known[anchor];coefficient=(1+known.reduce((s,l,i)=>s+(i===anchor?0:l.a*factor(main.r,l.n)),0))/factor(main.r,N);}
-      else coefficient=known.reduce((s,l)=>s+l.a,0);
+      coefficient=known.reduce((s,l)=>s+l.a,0);
       const principal=a/coefficient;
       if(!Number.isFinite(principal)||principal<=0||principal>1e12)throw Error('invalidSolver');
       loans=known.map(l=>({...l,p:principal,a:principal/factor(l.r,l.n)}));
     }else throw Error('invalidSolver');
-    const result=schedule(loans,smooth);
-    result.solved=loans.map((l,i)=>({...l,n:result.effectiveTerms?.[i]??l.n,last:result.rows[(result.effectiveTerms?.[i]??l.n)-1].payments[i]}));
+    const result=schedule(loans,smooth,target==='rate'&&smooth?a:null);
+    result.solved=loans.map((l,i)=>({...l,last:result.rows[l.n-1].payments[i]}));
     result.globalPayment=a;result.globalRule=target==='rate'?'commonRate':'equalAmounts';
     return result;
   }

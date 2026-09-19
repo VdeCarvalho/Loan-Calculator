@@ -54,7 +54,7 @@ O seletor **O que calcular** oferece seis opções. O campo desconhecido deixa d
 - Taxa: calcula uma taxa comum, usando os valores e prazos de cada empréstimo.
 - Valor emprestado: no plano normal, calcula o principal total e o divide igualmente entre os empréstimos. No lissage, divide a mensalidade igualmente entre os contratos ativos e redistribui a mensalidade à medida que eles terminam; calcula o principal de cada contrato pelo valor presente de suas parcelas, usando sua taxa e prazo. Assim, os valores emprestados podem diferir.
 
-No plano normal, a mensalidade geral é o total enquanto todos os empréstimos estão ativos; cai quando algum termina. No lissage, representa a mensalidade constante até o fim. Taxa e valor oferecem ambos os planos; o prazo comum mantém a soma das parcelas constante até a última parcela. Nenhuma distribuição arbitrária de taxas ou valores individuais é apresentada como solução única.
+No plano normal, a mensalidade geral é o total enquanto todos os empréstimos estão ativos; cai quando algum termina. No lissage do valor emprestado, representa a mensalidade constante até o fim. No cálculo da taxa, representa o teto mensal. Taxa e valor oferecem ambos os planos; o prazo comum mantém a soma das parcelas constante até a última parcela. Nenhuma distribuição arbitrária de taxas ou valores individuais é apresentada como solução única.
 
 O prazo calculado pode ser mostrado em meses ou em anos com os meses restantes. Exemplo: 233 meses = 19 anos e 5 meses. Como os pagamentos são mensais, uma duração teórica fracionada é arredondada para o mês seguinte, com redução da última parcela. Não se força um arredondamento para anos inteiros.
 
@@ -91,18 +91,11 @@ Quando `r = 0`, `a(0,n) = n` e a parcela é `P/n`. A soma das parcelas cai à me
 
 ### Mensalidade uniforme / lissage
 
-É uma simulação de um empréstimo com parcelas em patamares, não uma média aritmética das parcelas originais.
+Nenhum prazo é prorrogado. Todos os contratos podem ter parcelas ajustadas. O modelo usa etapas definidas pelos vencimentos originais e mantém a parcela individual constante em cada etapa. Um programa linear minimiza a amplitude (maior menos menor mensalidade total); entre soluções igualmente uniformes, minimiza o total pago. Esta é uma otimização dentro desse modelo por etapas, não de todo cronograma mensal arbitrário.
 
-O empréstimo de maior valor entre os que terminam por último é o **empréstimo ajustado**. Em empate de valor e prazo, usa-se o primeiro na lista. Os demais mantêm suas parcelas normais e seus prazos.
+As restrições exigem pagamentos não negativos, o valor presente das parcelas igual ao principal de cada contrato e nenhum pagamento depois do vencimento. Os saldos são reconstruídos de trás para frente para evitar instabilidade numérica. Juros não pagos são capitalizados, com aviso e saldos individuais visíveis. Se a amplitude superar meio centavo, a interface e o PDF mostram a faixa de mensalidades e avisam que não é possível uma mensalidade constante no modelo por etapas.
 
-Se `P` e `r` pertencem ao empréstimo ajustado, `N` é o prazo máximo e `Aᵢ`, `nᵢ` são as parcelas e os prazos dos demais:
-
-```
-mensalidade total C = (P + Σ Aᵢ × a(r,nᵢ)) / a(r,N)
-parcela ajustada no mês m = C - Σ parcelas dos outros empréstimos ativos em m
-```
-
-A parcela ajustada cresce quando os outros empréstimos terminam, mantendo o total constante e quitando o saldo no prazo original. Os juros são recalculados a partir dos saldos. Se uma parcela não cobrir todos os juros do mês, os juros não pagos são incorporados ao saldo e passam a render juros. O resultado exibe um aviso de amortização negativa e a tabela mostra o saldo de cada empréstimo. O método continua rejeitando parcelas negativas. Outras formas de renegociação não são simuladas.
+No cálculo inverso de taxa, a mensalidade informada é um teto. Calcula-se a maior taxa comum que permite respeitá-lo sem ultrapassar nenhum vencimento e, nessa taxa, minimiza-se a amplitude das parcelas. A busca mantém todos os prazos originais.
 
 O cronograma precisa ser aceito pelo banco para corresponder a um contrato real.
 
@@ -174,9 +167,11 @@ Revisão visual do resumo: PDFs de duração, taxa e valor emprestado gerados co
 
 ## Lissage flexível ao calcular o valor emprestado
 
-A divisão igual do principal foi removida deste modo. Cada mês distribui o orçamento igualmente entre os contratos ainda ativos. O principal de cada contrato é o valor presente de suas parcelas, descontadas pela taxa mensal desse contrato. Não é uma otimização do maior crédito possível: é uma regra explícita para obter uma solução determinada a partir de uma mensalidade conjunta. Outros modos mantêm seus métodos anteriores.
+A divisão igual do principal foi removida deste modo. Cada mês distribui o orçamento igualmente entre os contratos ainda ativos. O principal de cada contrato é o valor presente de suas parcelas, descontadas pela taxa mensal desse contrato. Não é uma otimização do maior crédito possível: é uma regra explícita para obter uma solução determinada a partir de uma mensalidade conjunta. Os modos com valores conhecidos usam a otimização por etapas descrita acima.
 
 Exemplo: R$2.000 por mês; 12 meses a 12% ao ano, 24 meses a 8% e 36 meses a 4% (taxas nominais). Resultado conjunto: **R$66.580,62**. Total pago: **R$72.000,00**; juros: **R$5.419,38**. Nos primeiros 12 meses, cada contrato recebe um terço da mensalidade; nos 12 seguintes, cada um dos dois restantes recebe metade; nos últimos 12, o último recebe a mensalidade inteira. Diferenças de um centavo na soma visual decorrem do arredondamento de exibição. Todas as parcelas calculadas são não negativas e os três saldos são quitados nos seus respectivos vencimentos.
 
-### Adaptação automática do lissage
-Se o método original produzir parcelas negativas, os cálculos de mensalidade, juros, total e taxa usam uma simulação com todos os contratos estendidos ao maior prazo informado. Valores e taxas conhecidas são preservados; vencimentos menores são alterados. O resultado e o PDF identificam essa adaptação, que depende de renegociação. Não é uma solução com os vencimentos originais preservados. Entradas inválidas e problemas matematicamente sem solução continuam sendo explicados, sem inventar resultados.
+
+### Caso de 12, 24 e 36 anos
+R$260.000 a 12%, R$180.000 a 8% e R$120.000 a 4% anuais nominais: R$3.874,90 por mês nos meses 1–288 e R$2.739,56 nos meses 289–432. Os contratos são quitados nos meses 144, 288 e 432. O plano prioriza o primeiro contrato, depois o segundo e por fim o terceiro, sem estender vencimentos. O aviso informa que se trata de mensalidade aproximada.
+`node tests/smoothing.cjs` verifica limites matemáticos independentes do exemplo, 100 carteiras variadas, prazos originais, juros zero e altos, 1.000/12.000 meses e orçamento no cálculo inverso da taxa.
