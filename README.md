@@ -33,7 +33,7 @@ Documentação oficial: https://docs.github.com/en/pages/getting-started-with-gi
 - Pagamentos normais ou mensalidade total uniforme (lissage).
 - Resumo por períodos, capital total, juros e custo total.
 - Tabela de todos os meses, com parcelas por empréstimo, juros do mês, amortização e saldo agregado. Paginação de 100 linhas e botão para mostrar tudo.
-- Dois espaços laterais de publicidade, reservados no desktop. Em telas pequenas, as laterais ficam ocultas para priorizar a calculadora.
+- Dois espaços laterais de publicidade, reservados no desktop. Em telas pequenas (até 900 px), as laterais ficam ocultas e a área de publicidade aparece no topo, antes do formulário.
 
 ## Escolher o que calcular
 
@@ -93,7 +93,7 @@ Quando `r = 0`, `a(0,n) = n` e a parcela é `P/n`. A soma das parcelas cai à me
 
 Nenhum prazo é prorrogado. Todos os contratos podem ter parcelas ajustadas. O modelo usa etapas definidas pelos vencimentos originais e mantém a parcela individual constante em cada etapa. Um programa linear minimiza a amplitude (maior menos menor mensalidade total); entre soluções igualmente uniformes, minimiza o total pago. Esta é uma otimização dentro desse modelo por etapas, não de todo cronograma mensal arbitrário.
 
-As restrições exigem pagamentos não negativos, o valor presente das parcelas igual ao principal de cada contrato e nenhum pagamento depois do vencimento. Os saldos são reconstruídos de trás para frente para evitar instabilidade numérica. Juros não pagos são capitalizados, com aviso e saldos individuais visíveis. Se a amplitude superar meio centavo, a interface e o PDF mostram a faixa de mensalidades e avisam que não é possível uma mensalidade constante no modelo por etapas.
+As restrições exigem pagamentos não negativos, o valor presente das parcelas igual ao principal de cada contrato e nenhum pagamento depois do vencimento. Os saldos são reconstruídos de trás para frente para evitar instabilidade numérica. Juros não pagos são capitalizados, com saldos individuais visíveis. Se a amplitude superar meio centavo, a interface e o PDF mostram a faixa de mensalidades e avisam que não é possível uma mensalidade constante no modelo por etapas.
 
 No cálculo inverso de taxa, a mensalidade informada é um teto. Calcula-se a maior taxa comum que permite respeitá-lo sem ultrapassar nenhum vencimento e, nessa taxa, minimiza-se a amplitude das parcelas. A busca mantém todos os prazos originais.
 
@@ -120,7 +120,7 @@ As 30 moedas foram escolhidas para ampla cobertura geográfica e inclusão das s
 
 ## Espaços para AdSense
 
-Os espaços `#ad-left` e `#ad-right` são **reservas visuais**, sem anúncios ativos, IDs fictícios ou rastreamento. Eles aparecem em `app.js`, na função `ad`, e são estilizados por `.ad` em `style.css`.
+Os espaços `#ad-left`, `#ad-right` e `#ad-mobile` são **reservas visuais**, sem anúncios ativos, IDs fictícios ou rastreamento. Eles aparecem em `app.js`, na função `ad`, e são estilizados por `.ad` em `style.css`.
 
 Para ativar publicidade, será necessário usar o código e os identificadores reais fornecidos pela sua conta aprovada no AdSense. Insira o carregador no `index.html` e implemente as unidades nesses espaços. Como a interface é renderizada novamente ao trocar idioma ou recalcular, a integração deve preservar os contêineres de anúncios e inicializá-los uma única vez; não basta disparar o carregador a cada cálculo. O site entregue não inclui essa integração, conforme o pedido de reservar os espaços.
 
@@ -175,3 +175,5 @@ Exemplo: R$2.000 por mês; 12 meses a 12% ao ano, 24 meses a 8% e 36 meses a 4% 
 ### Caso de 12, 24 e 36 anos
 R$260.000 a 12%, R$180.000 a 8% e R$120.000 a 4% anuais nominais: R$3.874,90 por mês nos meses 1–288 e R$2.739,56 nos meses 289–432. Os contratos são quitados nos meses 144, 288 e 432. O plano prioriza o primeiro contrato, depois o segundo e por fim o terceiro, sem estender vencimentos. O aviso informa que se trata de mensalidade aproximada.
 `node tests/smoothing.cjs` verifica limites matemáticos independentes do exemplo, 100 carteiras variadas, prazos originais, juros zero e altos, 1.000/12.000 meses e orçamento no cálculo inverso da taxa.
+
+Avisos simplificados: o resultado mostra apenas o aviso de mensalidade aproximada. A descrição do método permanece na seção de detalhes. Publicidade móvel usa uma reserva de pelo menos 100 px de altura, exclusiva para telas de até 900 px.
