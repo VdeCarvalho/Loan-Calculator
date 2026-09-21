@@ -83,3 +83,18 @@ Object.assign(I18N.id,{"approximateLabel":"Cicilan paling merata","approximateNo
 I18N.id.globalNormal=I18N.id.smoothMethod;
 Object.assign(I18N.ur,{"approximateLabel":"ممکنہ حد تک یکساں قسط","approximateNotice":"دیے گئے اعداد سے مستقل ماہانہ قسط ممکن نہیں۔ درج مدت برقرار رکھتے ہوئے یہ ممکنہ حد تک سب سے یکساں نتیجہ ہے۔","smoothMethod":"تمام قرضوں کی اقساط مدت بڑھائے بغیر تبدیل کی جاتی ہیں۔ اختتامی تاریخوں کے درمیان ہر قرض کی قسط مستقل رہتی ہے۔ سب سے بڑی اور چھوٹی کل قسط کا فرق کم سے کم کیا جاتا ہے؛ برابری پر کل ادائیگی کم کی جاتی ہے۔ غیر ادا شدہ سود اصل زر میں شامل ہوتا ہے۔ شرح کے حساب میں درج قسط منصوبے کی بالائی حد ہے۔"});
 I18N.ur.globalNormal=I18N.ur.smoothMethod;
+
+const EXCEL_TRANSLATIONS={
+  en:['Download Excel','Could not create the Excel file. Please try again.'],
+  pt:['Baixar Excel','Não foi possível gerar o arquivo Excel. Tente novamente.'],
+  fr:['Télécharger Excel','Impossible de créer le fichier Excel. Réessayez.'],
+  es:['Descargar Excel','No se pudo crear el archivo Excel. Inténtalo de nuevo.'],
+  ru:['Скачать Excel','Не удалось создать файл Excel. Повторите попытку.'],
+  zh:['下载 Excel','无法创建 Excel 文件。请重试。'],
+  hi:['Excel डाउनलोड करें','Excel फ़ाइल नहीं बन सकी। फिर प्रयास करें।'],
+  ar:['تنزيل Excel','تعذر إنشاء ملف Excel. حاول مرة أخرى.'],
+  bn:['Excel ডাউনলোড করুন','Excel ফাইল তৈরি করা যায়নি। আবার চেষ্টা করুন।'],
+  id:['Unduh Excel','File Excel tidak dapat dibuat. Coba lagi.'],
+  ur:['Excel ڈاؤن لوڈ کریں','Excel فائل نہیں بن سکی۔ دوبارہ کوشش کریں۔']
+};
+for(const [language,[downloadExcel,excelError]]of Object.entries(EXCEL_TRANSLATIONS))Object.assign(I18N[language],{downloadExcel,excelError});

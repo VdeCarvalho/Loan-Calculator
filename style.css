@@ -10,3 +10,4 @@ a.download{text-decoration:none}
 .result-top{flex-wrap:wrap}.result-top>div{min-width:0;max-width:100%}.payment{overflow-wrap:anywhere}
 
 .ad-mobile{display:none}@media(max-width:900px){.ad-mobile{display:flex;min-height:100px;width:100%;margin:0 0 20px;border:1px dashed #c9d4d9;border-radius:10px;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#7c8b92;text-align:center;font-size:12px}.ad-mobile span{text-transform:uppercase;letter-spacing:1.5px;font-size:11px}}
+.download-actions{display:flex;gap:12px;margin:0 0 20px}.download-actions .download{flex:1;min-width:0;margin:0}@media(max-width:560px){.download-actions{flex-direction:column}}
