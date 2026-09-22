@@ -73,6 +73,31 @@
     return zip([['[Content_Types].xml',contentTypes],['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],['xl/workbook.xml',wb],['xl/_rels/workbook.xml.rels',rels],['xl/styles.xml',styles],...sheets.map((s,i)=>[`xl/worksheets/sheet${i+1}.xml`,s.xml()])]);
   }
 
+  function onFirstSheet(study,calculation,solver,afterRow){
+    const calcOffset=afterRow+5;
+    const calcLast=Math.max(...[...calculation.cells.values()].map(cell=>cell.r));
+    const solverOffset=solver?calcOffset+calcLast+5:0;
+    const offsets=new Map([[quote(study.name)+'!',0],[quote(calculation.name)+'!',calcOffset]]);
+    if(solver)offsets.set(quote(solver.name)+'!',solverOffset);
+    const cellRef=/((?:'(?:[^']|'')+'|[A-Za-z_][A-Za-z0-9_]*)!)?(\$?)([A-Z]{1,3})(\$?)(\d+)/g;
+    function moveFormula(formula,origin){
+      return formula.split(/("(?:[^"]|"")*")/g).map((part,index)=>index%2?part:part.replace(cellRef,(match,sheet,absoluteCol,column,absoluteRow,row,position)=>{
+        if(!sheet&&position&&/[A-Za-z0-9_.!]/.test(part[position-1]))return match;
+        const offset=sheet?offsets.get(sheet):origin;
+        return offset===undefined?match:`${absoluteCol}${column}${absoluteRow}${Number(row)+offset}`;
+      })).join('');
+    }
+    for(const cell of study.cells.values())if(cell.value.type==='f')cell.value.value=moveFormula(cell.value.value,0);
+    for(const [sheet,offset] of [[calculation,calcOffset],...(solver?[[solver,solverOffset]]:[])]){
+      for(const cell of sheet.cells.values()){
+        const value=cell.value.type==='f'?{...cell.value,value:moveFormula(cell.value.value,offset)}:{...cell.value};
+        study.set(cell.c,cell.r+offset,value,cell.style);
+      }
+      for(const [column,width] of Object.entries(sheet.widths))if(!(column in study.widths))study.widths[column]=width;
+    }
+    return study;
+  }
+
   function build(state,words,math){
     if(!state.result)throw Error('No calculated result');
     const r=state.result,L=labels(state.lang),S=new Sheet(L[0]),C=new Sheet(L[1]),needsSolver=['duration','rate'].includes(state.target),V=needsSolver?new Sheet(L[2]):null;
@@ -228,7 +253,7 @@
     if(smooth&&state.target!=='amount'&&state.target!=='rate')C.str(helperCol,7,L[15]+' / '+words.amount,2);
     S.widths={0:28,1:22,2:19,3:21,4:20,5:18};C.widths={0:23,1:20,2:18,3:18,4:18,5:19,6:19,7:19,8:19};
     for(let i=9;i<=helperCol;i++)C.widths[i]=19;
-    const sheets=V?[C,S,V]:[C,S];
+    const sheets=[onFirstSheet(S,C,V,totalsRow+2)];
     return {sheets,blob:packageWorkbook(sheets)};
   }
 
