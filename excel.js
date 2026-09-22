@@ -228,7 +228,8 @@
     if(smooth&&state.target!=='amount'&&state.target!=='rate')C.str(helperCol,7,L[15]+' / '+words.amount,2);
     S.widths={0:28,1:22,2:19,3:21,4:20,5:18};C.widths={0:23,1:20,2:18,3:18,4:18,5:19,6:19,7:19,8:19};
     for(let i=9;i<=helperCol;i++)C.widths[i]=19;
-    return {sheets:V?[S,C,V]:[S,C],blob:packageWorkbook(V?[S,C,V]:[S,C])};
+    const sheets=V?[C,S,V]:[C,S];
+    return {sheets,blob:packageWorkbook(sheets)};
   }
 
   async function download(state,words,math){
